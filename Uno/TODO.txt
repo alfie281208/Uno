@@ -1,0 +1,6 @@
+TODO
+=====
+
+1. Clean up CardStack.cs
+2. Performance boosts
+3. Simple core game logic
