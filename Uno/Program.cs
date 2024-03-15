@@ -21,17 +21,24 @@
                 if (args[1].Length > 12)
                     Usage();
 
-                Game game = new Game(args[1], args[2], Convert.ToInt32(args[3]));
+                Game? game = new Game(args[1], args[2], Convert.ToUInt16(args[3]));
                 game.Play();
+
+                game = null;
             }
             else if (args[0] == "server")
             {
                 if (args.Length != 2)
                     Usage();
 
-                Server server = new Server(Convert.ToInt32(args[1]));
+                Server? server = new Server(Convert.ToUInt16(args[1]));
                 server.Run();
+
+                server = null;
             }
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
 
             return 0;
         }

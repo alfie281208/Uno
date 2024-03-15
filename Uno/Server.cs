@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Raylib_cs;
 
 namespace Uno
 {
@@ -10,10 +9,12 @@ namespace Uno
         private Socket _listener;
         private IPEndPoint _listenerEndPoint;
 
+        private string[] _players;
+        private int _joined;
         private CardStack _placedStack;
         private CardStack _reserveStack;
 
-        public Server(int port)
+        public Server(UInt16 port)
         {
             // Initialise the socket and end point
             try
@@ -29,21 +30,26 @@ namespace Uno
                 Environment.Exit(1);
             }
 
+            // Player list
+            _players = new string[6];
+            _joined = 0;
+
             // Initialise the stacks
             _placedStack = new CardStack();
             _reserveStack = new CardStack();
-
-            _placedStack.FillWithCards();
-            _placedStack.Shuffle();
-
+            _placedStack.FillWithNone();
             _reserveStack.FillWithCards();
             _reserveStack.Shuffle();
         }
 
         ~Server()
         {
+            // Shutdown the listener
             _listener.Shutdown(SocketShutdown.Both);
             _listener.Close();
+
+            // Dispose objects
+            _listener.Dispose();
         }
 
         public void Run()
@@ -57,29 +63,25 @@ namespace Uno
                 {
                     // Connect to client
                     Socket clientConnection = _listener.Accept();
-                    Console.WriteLine($"Client @ {clientConnection.RemoteEndPoint} has requested");
 
-                    // Incoming data buffer and result
-                    byte[] buffer = new byte[1024];
-                    string request = null;
+                    // Get the username
+                    byte[] buffer = new byte[12];
+                    string data = "";
                     
-                    // Get the sent data
                     while (true)
                     {
                         int bufferCount = clientConnection.Receive(buffer);
-                        request += Encoding.ASCII.GetString(buffer, 0, bufferCount);
+                        data += Encoding.ASCII.GetString(buffer, 0, bufferCount);
 
-                        if (request.IndexOf("\0") > -1)
+                        if (data.IndexOf("\0") > -1)
                             break;
                     }
 
-                    Console.WriteLine($"Request : {request}");
+                    if (data == "")
+                        continue;
 
-                    string response = Respond(request);
-                    clientConnection.Send(Encoding.ASCII.GetBytes(response));
-
-                    clientConnection.Shutdown(SocketShutdown.Both);
-                    clientConnection.Close();
+                    InterpretRequest(data);
+                    clientConnection.Send(Encoding.ASCII.GetBytes(data));
                 }
             }
             catch (Exception ex)
@@ -89,36 +91,35 @@ namespace Uno
             }
         }
 
-        private string Respond(string request)
+        public string InterpretRequest(string data)
         {
-            string[] command = request.Split(":");
-
-            switch (command[0])
+            switch (data[0])
             {
-                case "PlacedTop":
-                    return _placedStack.GetTop().ToString();
+                case 'J':
+                    _players[_joined++] = data[1..data.Length];
+                    return "0";
 
-                case "Place":
-                    if (command.Length == 2)
-                        _placedStack.Push(Card.ToCard(command[1]));
-                    break;
+                case 'L':
+                    for (int i = 0; i < 6; i++)
+                        if (_players[i] == data[1..data.Length])
+                            _players[i] = "";
 
-                case "Draw":
-                    if (command.Length == 2)
-                        return Draw(Convert.ToInt32(command[1]));
-                    break;
+                    Console.WriteLine("LEFT");
+
+                    return "0";
+
+                default:
+                    return "0";
             }
-
-            return "";
         }
 
-        private string Draw(int count)
+        private string DrawCards(int count)
         {
-            string data = null;
-            Card[] cards = _reserveStack.Remove(count);
+            Card[] cards = _placedStack.Remove(count);
+            string data = "";
 
             foreach (Card card in cards)
-                data += card.ToString() + ",";
+                data += card.ToString();
 
             return data;
         }

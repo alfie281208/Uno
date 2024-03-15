@@ -4,3 +4,19 @@ TODO
 1. Clean up CardStack.cs
 2. Performance boosts
 3. Simple core game logic
+4. Clear remove cards
+
+IDEA : Request syntax
+======================
+[PREFIX][DATA]
+
+Examples - 
+	J      // Join server with username
+	L      // Leave server
+	S      // Start game
+	X      // Stop game
+	P      // Place card
+	D      // Draw card(s)
+	T      // Get top of placed cards
+	C      // Cards
+	0      // null

@@ -1,5 +1,7 @@
 ﻿// TODO : Fix bug where only 3 wild cards are generated
 
+using System.Drawing;
+
 namespace Uno
 {
     internal enum CardColour
@@ -13,10 +15,16 @@ namespace Uno
         Skip, Reverse, DrawTwo, DrawFour, Wild
     }
 
-    internal readonly struct Card(CardColour colour, CardType type)
+    internal readonly struct Card
     {
-        public CardColour Colour { get; } = colour;
-        public CardType Type { get; } = type;
+        public CardColour Colour { get; }
+        public CardType Type { get; }
+
+        public Card(CardColour colour, CardType type)
+        {
+            Colour = colour;
+            Type = type;
+        }
 
         public override string ToString() => $"{(int)Colour},{(int)Type}";
 
@@ -29,9 +37,8 @@ namespace Uno
 
     internal class CardStack
     {
-        public const int CARD_COUNT = 108;
-        private readonly Card[] _cards = new Card[CARD_COUNT];
-        private int _top = 0;
+        private readonly Card[] _cards = new Card[108];
+        private int _top = -1;
 
         public void FillWithCards()
         {
@@ -55,7 +62,7 @@ namespace Uno
 
         public void FillWithNone()
         {
-            for (int i = 0; i < CARD_COUNT; i++)
+            for (int i = 0; i < _cards.Length; i++)
                 _cards[i] = new Card(CardColour.None, CardType.None);
         }
 
@@ -64,44 +71,27 @@ namespace Uno
             // Fischer-Yates shuffle
             Random rand = new Random();
 
-            for (int i = CARD_COUNT - 1; i > 0; i--)
+            for (int i = 0; i < (_cards.Length - 1); i++)
             {
-                int rn = rand.Next(i + 1);
+                int rn = i + rand.Next(_cards.Length - i);
+
                 Card card = _cards[i];
                 _cards[rn] = _cards[i];
                 _cards[i] = card;
             }
         }
 
-        public void Push(Card card) => _cards[_top++] = card;
+        public void Push(Card card) => _cards[++_top] = card;
 
         public Card[] Remove(int amount)
         {
-            Console.WriteLine(_cards[100].ToString());
-
-            Card[] cards = _cards[((_top - 1) - amount)..(_top - 1)];
-            //Array.Clear(_cards, (_top - 1) - amount, (_top - 1));
+            Card[] cards = _cards[(_top - amount).._top];
+            Array.Clear(cards, _top - amount, _top);
             _top -= amount;
 
             return cards;
         }
 
-        public Card GetTop() => _cards[_top - 1];
-
-        public void Print()
-        {
-            Console.WriteLine("Cards!");
-
-            foreach (Card card in _cards)
-                Console.Write($"[{card.Colour} : {card.Type}] ");
-            
-            Console.WriteLine();
-        }
-
-        private void Error(string msg)
-        {
-            Console.Write($"CardStack Error : {msg}");
-            Environment.Exit(1);
-        }
+        public Card GetTop() => _cards[_top];
     }
 }

@@ -1,8 +1,5 @@
-﻿using System;
-using System.Linq.Expressions;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace Uno
@@ -12,8 +9,12 @@ namespace Uno
         private Socket _sender;
         private IPEndPoint _serverEndPoint;
 
-        public Client(string username, string ip, int port)
+        public readonly List<Card> Cards;
+        private string _username; 
+
+        public Client(string username, string ip, UInt16 port)
         {
+            // Initialise socket and end point
             try
             {
                 IPAddress ipAddress = IPAddress.Parse(ip);
@@ -26,13 +27,19 @@ namespace Uno
                 Environment.Exit(1);
             }
 
-            // TODO : Request($"Join:{username}");
+            Cards = new List<Card>();
+            _username = username;
         }
 
         ~Client()
         {
+            // Send leave command to server and shutdown connection
+            Message("L" + _username);
             _sender.Shutdown(SocketShutdown.Both);
             _sender.Close();
+
+            // Dispose objects
+            _sender.Dispose();
         }
 
         public void Connect()
@@ -46,28 +53,12 @@ namespace Uno
                 Console.WriteLine(ex.ToString());
                 Environment.Exit(1);
             }
+
+            // Send join command to server
+            Message("J" + _username);
         }
 
-        public Card GetPlacedTop() => Card.ToCard(Request("PlacedTop"));
-
-        public void PlaceCard(Card card) => Request("Place:" + card.ToString());
-
-        public Card[] DrawCards(int count)
-        {
-            string response = Request("Draw:" + Convert.ToInt32(count));
-            Card[] cards = new Card[count];
-
-            Console.WriteLine(response);
-
-            for (int i = 0; i < response.Length; i += 2)
-            {
-                Card.ToCard(response.Substring(i, i + 1));
-            }
-
-            return cards;
-        }
-
-        private string Request(string what)
+        private string Message(string what)
         {
             byte[] buffer = new byte[1024];
             int nBytes = 0;
